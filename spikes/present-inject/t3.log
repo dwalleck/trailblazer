@@ -1,0 +1,26 @@
+  [23:51:33] session: sessionId=sess_93f1eeb7-835e-493a-b582-4f9c5a93a055 transport=stdio queue=C:\Users\dwall\AppData\Local\Temp\wf-queue-qbh2qq16
+  [23:51:46] tool_call: @wayfinder-probe/present_questions [pending]
+  [23:51:46] permission: @wayfinder-probe/present_questions -> {'optionId': 'accept', 'name': 'Allow', 'kind': 'allow_once'}
+  [23:51:46] tool_call_update: tooluse_tooGrP1Oy6SBw1FQCBy7v7 -> in_progress
+  [23:51:46] tool_call_update: tooluse_tooGrP1Oy6SBw1FQCBy7v7 -> completed
+  [23:51:48] presented: round d421d9a4: deploy-target; db; auth
+  [23:51:48] wait: delaying answer 600.0s
+  [23:51:52] turn1_end: turn 1 ended early; holding answer until delay elapses
+  [00:01:49] prompt: [wayfinder answers for round d421d9a4] deploy-target: fly-io db: postgres auth: api-key The block above contains the ope
+  [00:01:54] turn_end: stopReason=end_turn error=None
+  [00:01:54] verdict: T3: 600.0s-delayed injection; answers referenced 3/3
+  [00:01:54] done: T3 finished in 615s; capture=C:\Users\dwall\repos\wayfinder\spikes\present-inject\captures\T3-stdio.jsonl
+
+=== TIMELINE ===
+23:51:33  session            sessionId=sess_93f1eeb7-835e-493a-b582-4f9c5a93a055 transport=stdio queue=C:\Users\dwall\AppData\Local\Temp\wf-queue-qbh2qq16
+23:51:46  tool_call          @wayfinder-probe/present_questions [pending]
+23:51:46  permission         @wayfinder-probe/present_questions -> {'optionId': 'accept', 'name': 'Allow', 'kind': 'allow_once'}
+23:51:46  tool_call_update   tooluse_tooGrP1Oy6SBw1FQCBy7v7 -> in_progress
+23:51:46  tool_call_update   tooluse_tooGrP1Oy6SBw1FQCBy7v7 -> completed
+23:51:48  presented          round d421d9a4: deploy-target; db; auth
+23:51:48  wait               delaying answer 600.0s
+23:51:52  turn1_end          turn 1 ended early; holding answer until delay elapses
+00:01:49  prompt             [wayfinder answers for round d421d9a4] deploy-target: fly-io db: postgres auth: api-key The block above contains the ope
+00:01:54  turn_end           stopReason=end_turn error=None
+00:01:54  verdict            T3: 600.0s-delayed injection; answers referenced 3/3
+00:01:54  done               T3 finished in 615s; capture=C:\Users\dwall\repos\wayfinder\spikes\present-inject\captures\T3-stdio.jsonl

@@ -1,0 +1,20 @@
+  [23:37:18] session: sessionId=sess_3d3e0fe5-932b-4b7a-bf5e-bfcf9646a063 transport=stdio queue=C:\Users\dwall\AppData\Local\Temp\wf-queue-3kdve3n9
+  [23:37:29] tool_call: @wayfinder-probe/present_questions [pending]
+  [23:37:29] permission: @wayfinder-probe/present_questions -> {'optionId': 'accept', 'name': 'Allow', 'kind': 'allow_once'}
+  [23:37:29] tool_call_update: tooluse_I6JCqaEZy7kFQeGQLOTCtx -> in_progress
+  [23:37:31] presented: round 31d03ef0: deploy-target; db; auth
+  [23:47:34] inject: wrote answer file for blocking round 31d03ef0
+  [23:47:34] tool_call_update: tooluse_I6JCqaEZy7kFQeGQLOTCtx -> completed
+  [23:47:38] verdict: T10: blocking call after 600.0s -> stopReason=end_turn error=None timeout_mentioned=False
+  [23:47:38] done: T10 finished in 612s; capture=C:\Users\dwall\repos\wayfinder\spikes\present-inject\captures\T10-stdio.jsonl
+
+=== TIMELINE ===
+23:37:18  session            sessionId=sess_3d3e0fe5-932b-4b7a-bf5e-bfcf9646a063 transport=stdio queue=C:\Users\dwall\AppData\Local\Temp\wf-queue-3kdve3n9
+23:37:29  tool_call          @wayfinder-probe/present_questions [pending]
+23:37:29  permission         @wayfinder-probe/present_questions -> {'optionId': 'accept', 'name': 'Allow', 'kind': 'allow_once'}
+23:37:29  tool_call_update   tooluse_I6JCqaEZy7kFQeGQLOTCtx -> in_progress
+23:37:31  presented          round 31d03ef0: deploy-target; db; auth
+23:47:34  inject             wrote answer file for blocking round 31d03ef0
+23:47:34  tool_call_update   tooluse_I6JCqaEZy7kFQeGQLOTCtx -> completed
+23:47:38  verdict            T10: blocking call after 600.0s -> stopReason=end_turn error=None timeout_mentioned=False
+23:47:38  done               T10 finished in 612s; capture=C:\Users\dwall\repos\wayfinder\spikes\present-inject\captures\T10-stdio.jsonl
