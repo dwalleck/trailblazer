@@ -55,7 +55,7 @@ Donor contributions:
 | Donor | What it gives |
 |---|---|
 | rivets (`dwalleck/rivets`) | `rivets-jsonl` crate linked directly (atomic JSONL writes, same `IssueStorage` path `rivets-mcp` wraps). No CLI spawning for the rivets adapter. |
-| cyril (`cyril-core`) | The KAS ACP lane: `protocol/kas/` (auth, callbacks, discovery, hooks, settings, host_io), transport, session state, approval prompts. No `_kiro/workflow/*` consumer exists yet — that is new code guided by `cyril/docs/kiro-2.16.0-wire-audit.md`. |
+| cyril (`cyril-core`) | The KAS ACP lane: `protocol/kas/` (auth, callbacks, discovery, hooks, settings, host_io), transport, session state, approval prompts. No `_kiro/workflow/*` consumer exists yet — that is new code guided by `cyril/docs/kiro-2.16.0-wire-audit.md`. **Measured embedding surface + carve-later decision: [`docs/wayfinder-acp-carve-map.md`](wayfinder-acp-carve-map.md)** — milestone 1 depends on cyril-core directly (5-call surface); the carve is a post-tracer-bullet refactor. |
 | kiro-control-center | The design framework: Rust core crate + thin `src-tauri/commands/*.rs` + SvelteKit-static Svelte 5 app + Tailwind 4 + tauri-specta generated `bindings.ts` + vitest + Playwright. |
 
 ## 3. The agent interface: one app-owned MCP server
@@ -89,9 +89,22 @@ This single component resolves two design problems at once: it is the choke
 point that makes the concurrency contract enforceable, and it is the channel
 that gives Kiro a structured question-asking capability (§4).
 
+Build contract: [`docs/mcp-server-kiro-notes.md`](mcp-server-kiro-notes.md) —
+the wire registration shapes, required method surface, permission/auto-approve
+mechanics, and the verify-at-build hazards (custom-agent allowlists × MCP
+tools, GPT strict schemas, child lifecycle).
+
 ## 4. Asking questions without an AskUserQuestion tool
 
-Kiro CLI has no native `AskUserQuestion` tool (unlike Claude Code). Prior art:
+Kiro's KAS lane ships a native structured-question callback — `_kiro/userInput`
+(options with descriptions, `recommended`, nested `subOptions`) — but it is
+**unreachable in a plain main session**: the `user_input` tool is never in a
+non-delegated session's candidate toolkit, even for a client-injected custom
+agent that declares it (vendor-pinned; validated by
+`docs/spike-user-input.md`, kiro-cli 2.16.1). Only spec-flow agents and
+*delegated* children (subagent stages, workflow steps) get it — see §8 for the
+delegated upside. So for v1's plain per-node sessions there is effectively no
+native `AskUserQuestion`. Prior art:
 Kiro Crew ships an `ask_question` MCP tool that works with kiro-cli today —
 the gateway holds a pending question keyed by `ask_id`, the dashboard renders
 a card, and the answer routes back (`docs/architecture/mcp.md` in KiroCrew).
@@ -150,6 +163,13 @@ same tool with one question.
 Rejected alternative: MCP elicitation (server-initiated input requests).
 Elicitation is answered by the MCP *client* — kiro-cli — which has no UI
 surface for it that we control. The whole point is rendering in OUR UI.
+
+Rejected alternative: native `_kiro/userInput` as the v1 mechanism. Spiked
+(`docs/spike-user-input.md`): a plain main session cannot obtain the
+`user_input` tool no matter what the injected agent's `tools` declares — the
+exclusion is feature-test-pinned in the KAS bundle. It works fully for
+delegated children (live round-trip verified), so it returns as an option only
+with the §8 executor seam.
 
 HITL vs AFK is expressed per call: grilling sessions block indefinitely for
 the human; sessions whose skills permit AFK progress get a timeout answer of
@@ -255,7 +275,16 @@ backend Kiro Crew uses has no workflow surface) maps cleanly onto this domain:
 map → run, frontier → `parallel` scheduler, fog graduation → `update` /
 `steps_queued`, "work until clear" → `repeat` with `onMaxIterations: pause`,
 external triggers → `watch`. It stays behind the executor trait until there
-is a reason to adopt it. When that day comes, the wire audit's consumer
+is a reason to adopt it. Adoption carries a discovered upside
+(`docs/spike-user-input.md`): step/subagent sessions are *delegated*, so they
+get the `user_input` tool by bypass and route questions to the client as
+native `_kiro/userInput` cards — no MCP machinery; a parked question holds
+the turn open ≥10 min with no timeout; pending questions replay as data on
+`session/load` (the request does not re-fire — the answer returns via a fresh
+prompt, i.e. Kiro's own crash recovery is present-and-inject-shaped). The
+spike's "Turn-end mechanics" consumer contract covers cancel/late-answer/
+reload handling. Keep the decision-card UI source-agnostic; the
+`present_questions` schema and `UserInputOption` are near-identical. When that day comes, the wire audit's consumer
 hazards are the implementation contract: `run_complete` can mean *paused*;
 `node_start` double-emits; `steps_queued` is overloaded; `node_complete` is
 not a liveness signal; `paused` and `node_paused` are independent;
@@ -274,8 +303,15 @@ not a liveness signal; `paused` and `node_paused` are independent;
 
 ## 10. Risks
 
-1. **cyril-core is not library-shaped.** The KAS lane must be carved out of a
-   TUI codebase into wayfinder-acp. Budget for extraction, not a clean dep.
+1. **The cyril carve is re-shaping, not disentangling** (downgraded
+   2026-08-09 after measuring the donor). The KAS lane + protocol plumbing is
+   ~17.4k lines and completely UI-free (cyril's core-never-imports-UI rule
+   held), and commands/notifications are already session-id-targeted
+   (`BridgeCommand::SendPrompt {session_id}`, `RoutedNotification`). What
+   remains is generalizing the few main-session assumptions (global
+   `CancelRequest`, global busy-guard, main-vs-subagent routing living in
+   cyril's binary) to N peer sessions. Structured work, not extraction
+   archaeology — but still not a clean dep.
 2. ~~MCP tool latency/timeout behavior~~ **RESOLVED by the spike**
    (`docs/spike-present-inject.md` Results): present/inject validated,
    blocking fallback viable ≥10 min, permission auto-approval and fresh-token
@@ -286,9 +322,69 @@ not a liveness signal; `paused` and `node_paused` are independent;
 5. Two advisory rounds hardened the concurrency contract; a third class
    remains untested until built: crash mid-pipeline (journal replay must be
    verified against each adapter, not just designed).
+6. ~~N concurrent node sessions with parallel turns on ONE KAS connection~~
+   **RESOLVED by spike** (`docs/spike-parallel-turns.md`, 2026-08-09): three
+   sessions ran turns simultaneously on one stdio connection — 126/178 chunks
+   interleaved across concurrently-flowing streams, flat first-token latency,
+   clean per-session routing, and (bonus) per-session error isolation
+   observed live. Residual: unmeasured beyond N=3; re-measure before assuming
+   linear scaling past ~4–6 concurrent AFK nodes.
+7. **Vendor drift.** KAS ships roughly biweekly and the `_kiro/*` wire moves
+   (the spikes ran on 2.16.1/2.16.2; the audits anchor at 2.16.0). Mitigation
+   is inherited, not built: cyril's release-diff discipline and the
+   bundle-as-oracle method. Wayfinder should pin the kiro-cli version it was
+   validated against and re-run the two spike harnesses on upgrade.
+8. **Credit economics.** Every node session burns real KAS turns; AFK
+   research fan-out multiplies it. Not a blocker — but the app needs a
+   visible per-map spend model from day one, and the sidecar metering files
+   (`~/.kiro/sessions/cli/*.json`, per cyril research) are the only on-disk
+   source to build it from.
+9. Two **verify-at-build** items from the MCP contract
+   (`docs/mcp-server-kiro-notes.md`): custom-agent `tools` allowlists filter
+   MCP tools out unless `includeMcpJson`/pattern-matched, and the
+   `permissions.rules` capability naming for MCP tools is unverified. Each is
+   a one-turn check; run them before the first custom agent ships.
 
 ## 11. Build order
 
+### Milestone 1 — tracer bullet (the first deliverable)
+
+One thin vertical slice of the real app, keeper code, cutting across steps
+1–4 below: **Tauri window opens → cyril-core bridge spawns one KAS session
+(wayfinder's MCP server declared at `session/new`) → the agent calls
+`present_questions` → real decision cards render in the window → the answer
+injects as a fenced-JSON prompt → the agent's confirmation streams back into
+the chat pane.** Every wire behavior in that loop is capture-backed
+(`docs/spike-present-inject.md`, `docs/spike-user-input.md`,
+`docs/spike-parallel-turns.md`); the app loop is sketched end-to-end in
+`docs/wayfinder-acp-carve-map.md`.
+
+In scope (the only new code):
+
+1. cyril-core deltas (carve map §"known deltas"): `mcpServers` + optional
+   `_meta.kiro` on `NewSession`/`LoadSession`; fresh-token auth handling.
+   Depend on cyril-core by path — **no carve** (carve map headline).
+2. Production `mcp-serve` subcommand: port
+   `spikes/present-inject/mcp_server.py` per
+   `docs/mcp-server-kiro-notes.md` (present_questions + the two read stubs).
+3. Minimal Tauri shell (kcc pattern): card panel + chat stream. No canvas.
+4. Wire-through: permission auto-approve for own tools, round journal
+   (present/resolve by round id), answer injection after turn end.
+
+Out of scope: map canvas, lease, tracker adapters, fog, spec/ticket phases,
+multiple sessions, custom agents. Done when: the loop above runs on a real
+`kiro-cli` twice in a row, including once surviving an app restart with a
+round pending (journal → reload → inject, the T8 path).
+
+Design sessions scoping this milestone should treat `design.md`, the spike
+docs, the MCP notes, and the carve map as **settled input** — interview only
+on what blocks this slice; park anything finer as an issue.
+
+### Full sequence
+
+0. ~~N-session parallel-turn probe~~ **DONE — PARALLEL**
+   (`docs/spike-parallel-turns.md`): the per-node session architecture is
+   licensed by observation, not inference.
 1. `wayfinder-core`: rivets-via-crate adapter + lease + journal + intent
    pipeline. Headless, unit-tested: two drivers racing, external-write
    detection, self-scoped compensation, crash-replay.

@@ -1,0 +1,34 @@
+[   0.01s] # spawned kiro-cli pid=634301 cwd=/home/dwalleck/.claude/tmp/wf-parallel-ntmuroq_ home=/home/dwalleck/.claude/tmp/wf-parallel-home-pxrnigl1
+[   0.52s] # initialized
+[   0.97s] # session A = sess_94319042-6f1c-46ed-9e87-da16966c952b
+[   1.05s] # session B = sess_50941f61-fed6-4bf6-a235-c8e59f39eadb
+[   1.10s] # session C = sess_6d743dfe-e4aa-435d-a0f4-40c296410b86
+[   1.10s] # prompt A sent
+[   1.11s]   ~ A: turn_start
+[   6.34s] # prompt B sent (while A mid-turn: first_chunk=False)
+[   6.34s]   ~ B: turn_start
+[   8.27s] # prompt C sent (while B mid-turn: first_chunk=True)
+[   8.28s]   ~ C: turn_start
+[   9.88s]   ~ A: turn_end stopReason='error'
+[   9.88s]   ~ A: prompt response -> 'ERROR {"code": -32000, "message": "Model output was blocked by content filtering policy. (Request ID: 871aae2e-5f17-4cf6-8867-a537c11ab866)", "dat'
+[  13.22s]   ~ C: turn_end stopReason='error'
+[  13.22s]   ~ C: prompt response -> 'ERROR {"code": -32000, "message": "Model output was blocked by content filtering policy. (Request ID: 1953e9d6-6560-429e-ace9-b8e2f5790e92)", "dat'
+[  14.05s]   ~ B: turn_end stopReason='end_turn'
+[  14.05s]   ~ B: prompt response -> 'end_turn'
+[  17.55s] 
+===== per-session timing =====
+[  17.55s]   A: turn_start=1.1123998165130615 first_chunk=9.869992971420288 last_chunk=9.869992971420288 turn_end=9.875279664993286 stop='error'
+[  17.55s]   B: turn_start=6.343548536300659 first_chunk=8.27421259880066 last_chunk=14.024597406387329 turn_end=14.048600435256958 stop='end_turn'
+[  17.55s]   C: turn_start=8.278840065002441 first_chunk=10.026114463806152 last_chunk=13.218669891357422 turn_end=13.22168755531311 stop='error'
+[  17.55s] 
+===== VERDICT =====
+[  17.55s]   pairwise overlap (later turn_start < earlier turn_end): [('A', 'B', True), ('A', 'C', True), ('B', 'C', True)]
+[  17.55s]   max simultaneously-open turns: 3 of 3
+[  17.55s]   chunk interleaves: 126 of 178 chunks
+[  17.55s]   first-token latency per session (s): {'A': 8.76, 'B': 1.93, 'C': 1.75}
+[  17.55s]   prompt responses: {'A': 'ERROR {"code": -32000, "message": "Model output was blocked by content filtering policy. (Request ID: 871aae2e-5f17-4cf6-8867-a537c11ab866)", "dat', 'C': 'ERROR {"code": -32000, "message": "Model output was blocked by content filtering policy. (Request ID: 1953e9d6-6560-429e-ace9-b8e2f5790e92)", "dat', 'B': 'end_turn'}
+[  17.55s]   content correct: {'A': False, 'B': True, 'C': False}  cross-talk=False
+[  17.55s]   rpc errors: (none)
+[  17.55s]   ==> REJECTED for at least one session
+[  17.56s] 
+# capture: /home/dwalleck/repos/trailblazer/spikes/parallel-turns/captures/parallel-stdio.jsonl
